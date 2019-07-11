@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using NuGet.Packaging;
+using NuGet.Packaging.Core;
+using NuGet.Versioning;
 using NuGetPe;
 
 namespace PackageExplorerViewModel
@@ -10,19 +13,16 @@ namespace PackageExplorerViewModel
     {
         #region IPackage Members
 
-        public IEnumerable<IPackageAssemblyReference> AssemblyReferences
-        {
-            get { return Enumerable.Empty<IPackageAssemblyReference>(); }
-        }
-
         public IEnumerable<IPackageFile> GetFiles()
         {
             return Enumerable.Empty<IPackageFile>();
         }
 
+        public IEnumerable<FrameworkReferenceGroup> FrameworkReferenceGroups => Enumerable.Empty<FrameworkReferenceGroup>();
+
         public Stream GetStream()
         {
-            return null;
+            return new MemoryStream();
         }
 
         public string Id
@@ -30,14 +30,14 @@ namespace PackageExplorerViewModel
             get { return "MyPackage"; }
         }
 
-        public TemplatebleSemanticVersion Version
+        public NuGetVersion Version
         {
-            get { return TemplatebleSemanticVersion.Parse("1.0.0"); }
+            get { return NuGetVersion.Parse("1.0.0"); }
         }
 
-        public string Title
+        public string? Title
         {
-            get { return String.Empty; }
+            get { return string.Empty; }
         }
 
         public IEnumerable<string> Authors
@@ -50,17 +50,17 @@ namespace PackageExplorerViewModel
             get { return Enumerable.Empty<string>(); }
         }
 
-        public Uri IconUrl
+        public Uri? IconUrl
         {
             get { return null; }
         }
 
-        public Uri LicenseUrl
+        public Uri? LicenseUrl
         {
             get { return null; }
         }
 
-        public Uri ProjectUrl
+        public Uri? ProjectUrl
         {
             get { return null; }
         }
@@ -75,32 +75,32 @@ namespace PackageExplorerViewModel
             get { return false; }
         }
 
-        public string Description
+        public string? Description
         {
             get { return "My package description."; }
         }
 
-        public string Summary
+        public string? Summary
         {
             get { return null; }
         }
 
-        public string ReleaseNotes
+        public string? ReleaseNotes
         {
             get { return null; }
         }
 
-        public string Copyright
+        public string? Copyright
         {
             get { return null; }
         }
 
-        public string Language
+        public string? Language
         {
             get { return null; }
         }
 
-        public string Tags
+        public string? Tags
         {
             get { return null; }
         }
@@ -110,22 +110,17 @@ namespace PackageExplorerViewModel
             get { return false; }
         }
 
-        public IEnumerable<PackageDependencySet> DependencySets
+        public IEnumerable<PackageDependencyGroup> DependencySets
         {
-            get { return Enumerable.Empty<PackageDependencySet>(); }
+            get { return Enumerable.Empty<PackageDependencyGroup>(); }
         }
 
-        public Uri ReportAbuseUrl
+        public Uri? ReportAbuseUrl
         {
             get { return null; }
         }
 
         public int DownloadCount
-        {
-            get { return -1; }
-        }
-
-        public int VersionDownloadCount
         {
             get { return -1; }
         }
@@ -160,28 +155,30 @@ namespace PackageExplorerViewModel
             get { return DateTimeOffset.MinValue; }
         }
 
-        public long PackageSize
-        {
-            get { return 0; }
-        }
-
-        public string PackageHash
-        {
-            get { return null; }
-        }
-
         public DateTimeOffset? Published
         {
             get { return DateTimeOffset.Now; }
         }
 
-        public Version MinClientVersion
+        public Version? MinClientVersion
         {
             get
             {
                 return null;
             }
         }
+
+        public IEnumerable<FrameworkAssemblyReference> FrameworkReferences => Enumerable.Empty<FrameworkAssemblyReference>();
+
+        public IEnumerable<PackageDependencyGroup> DependencyGroups => Enumerable.Empty<PackageDependencyGroup>();
+
+        public IEnumerable<ManifestContentFiles> ContentFiles => Enumerable.Empty<ManifestContentFiles>();
+
+        public IEnumerable<PackageType> PackageTypes => Enumerable.Empty<PackageType>();
+
+        public RepositoryMetadata? Repository => null;
+
+        public LicenseMetadata? LicenseMetadata => null;
 
         #endregion
 

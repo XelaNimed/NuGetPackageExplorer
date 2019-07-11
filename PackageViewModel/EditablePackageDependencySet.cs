@@ -1,27 +1,27 @@
 ﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Runtime.Versioning;
-using NuGetPe;
+using NuGet.Frameworks;
+using NuGet.Packaging;
+using NuGet.Packaging.Core;
 
 namespace PackageExplorerViewModel
 {
     public class EditablePackageDependencySet : INotifyPropertyChanged
     {
-        private FrameworkName _targetFramework;
-        private ObservableCollection<PackageDependency> _dependencies;
+        private NuGetFramework? _targetFramework;
 
         public EditablePackageDependencySet()
         {
-            _dependencies = new ObservableCollection<PackageDependency>();
+            Dependencies = new ObservableCollection<PackageDependency>();
         }
 
-        public EditablePackageDependencySet(PackageDependencySet packageDependencySet)
+        public EditablePackageDependencySet(PackageDependencyGroup packageDependencySet)
         {
             _targetFramework = packageDependencySet.TargetFramework;
-            _dependencies = new ObservableCollection<PackageDependency>(packageDependencySet.Dependencies);
+            Dependencies = new ObservableCollection<PackageDependency>(packageDependencySet.Packages);
         }
 
-        public FrameworkName TargetFramework
+        public NuGetFramework? TargetFramework
         {
             get
             {
@@ -39,25 +39,19 @@ namespace PackageExplorerViewModel
 
         public ObservableCollection<PackageDependency> Dependencies
         {
-            get
-            {
-                return _dependencies;
-            }
+            get;
         }
 
-        public PackageDependencySet AsReadOnly()
+        public PackageDependencyGroup AsReadOnly()
         {
-            return new PackageDependencySet(TargetFramework, Dependencies);
+            return new PackageDependencyGroup(TargetFramework ?? NuGetFramework.AnyFramework, Dependencies);
         }
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         private void OnPropertyChange(string propertyName)
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
     }
 }

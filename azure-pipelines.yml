@@ -1,0 +1,163 @@
+trigger:
+- master
+- rel/*
+
+pr:
+- master
+- rel/*
+
+variables:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  BuildConfiguration: Release
+
+jobs:
+- job: Build
+  pool:
+    vmImage: windows-2019
+  strategy:
+    matrix:
+      Channel_Zip:
+        ReleaseChannel: Zip
+      Channel_Store:
+        ReleaseChannel: Store
+      Channel_Nightly:
+        ReleaseChannel: Nightly
+      Channel_Choco:
+        ReleaseChannel: Choco
+
+  steps:
+  - task: DotNetCoreInstaller@0
+    inputs:
+      version: '3.0.100-preview7-012697'
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: custom
+      custom: tool
+      arguments: install --tool-path . nbgv
+    displayName: Install NBGV tool
+
+  - script: nbgv cloud -c -a
+    displayName: Set Version
+
+  - powershell: |
+      mkdir $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)
+
+      # Set versions
+
+      # Update appxmanifests. These must be done before build.
+      [xml]$manifest = Get-Content ".\PackageExplorer.Package\package.appxmanifest"
+      $manifest.Package.Identity.Version = "$(GitBuildVersionSimple).0"
+      $manifest.Save(".\PackageExplorer.Package\package.appxmanifest")
+
+      [xml]$manifest = Get-Content ".\PackageExplorer.Package\Package-Nightly.appxmanifest"
+      $manifest.Package.Identity.Version = "$(GitBuildVersionSimple).0"
+      $manifest.Save(".\PackageExplorer.Package\Package-Nightly.appxmanifest")
+
+      # Update badges
+      [xml]$badge = Get-Content ".\Build\ci_badge.svg"
+      $badge.svg.g[1].text[2].InnerText = "$(GitBuildVersionSimple).0"
+      $badge.svg.g[1].text[3].InnerText = "$(GitBuildVersionSimple).0"
+      $badge.Save("$(Build.ArtifactStagingDirectory)\$(ReleaseChannel)\ci_badge.svg")
+
+      [xml]$badge = Get-Content ".\Build\store_badge.svg"
+      $badge.svg.g[1].text[2].InnerText = "$(GitBuildVersionSimple).0"
+      $badge.svg.g[1].text[3].InnerText = "$(GitBuildVersionSimple).0"
+      $badge.Save("$(Build.ArtifactStagingDirectory)\$(ReleaseChannel)\stable_badge.svg")
+    displayName: Update manifest and badge versions
+
+  - powershell: |
+      # Update App Insights key
+      [xml]$doc = Get-Content ".\PackageExplorer\ApplicationInsights.config"
+      $doc.ApplicationInsights.InstrumentationKey = "$(AppInsightsKey)"
+      $doc.Save(".\PackageExplorer\ApplicationInsights.config")
+
+    displayName: Set AppInsights Config
+    env:
+      AppInsightsKey: $(AppInsightsKey)
+    condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['AppInsightsKey'], '')))
+
+  - task: MSBuild@1
+    displayName: Build NuGet Package Explorer for $(ReleaseChannel)
+    inputs:
+      solution: 'PackageExplorer/NuGetPackageExplorer.csproj'
+      msbuildArguments: /restore
+      configuration: $(BuildConfiguration)
+      maximumCpuCount: true
+
+  - task: MSBuild@1
+    displayName: Build Package
+    inputs:
+      solution: PackageExplorer.Package/PackageExplorer.Package.wapproj
+      msbuildArguments: /p:AppxPackageDir="$(Build.ArtifactStagingDirectory)\$(ReleaseChannel)\\"
+      configuration: $(BuildConfiguration)
+      maximumCpuCount: true
+    condition: and(succeeded(), or(eq(variables['ReleaseChannel'], 'Nightly'), eq(variables['ReleaseChannel'], 'Store')))
+
+  - task: MSBuild@1
+    displayName: Build for Zip and Choco
+    inputs:
+      solution: 'PackageExplorer/NuGetPackageExplorer.csproj'
+      msbuildArguments: /t:publish /p:RuntimeIdentifier=win-x86 /p:SelfContained=true /p:PublishReadyToRun=true
+      configuration: $(BuildConfiguration)
+      maximumCpuCount: true
+    condition: and(succeeded(), or(eq(variables['ReleaseChannel'], 'Zip'), eq(variables['ReleaseChannel'], 'Choco')))
+
+  - task: MSBuild@1
+    displayName: Pack Types Package
+    inputs:
+      solution: Types/Types.csproj
+      msbuildArguments: /t:pack /p:PackageOutputPath=$(Build.ArtifactStagingDirectory)\$(ReleaseChannel)\NuGet
+      configuration: $(BuildConfiguration)
+      maximumCpuCount: true
+    condition: and(succeeded(), eq(variables['ReleaseChannel'], 'Zip'))
+
+  - powershell: |
+      # Chocolatey
+      & choco.exe pack .\PackageExplorer\NuGetPackageExplorer.nuspec --version $(NBGV_ChocolateyPackageVersion) --OutputDirectory $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)
+    displayName: Create Choco package
+    condition: and(succeeded(), eq(variables['ReleaseChannel'], 'Choco'))
+
+  - task: ArchiveFiles@1
+    displayName: Zip PackageExplorer files
+    inputs:
+      archiveType: zip
+      rootFolder: PackageExplorer/bin/$(BuildConfiguration)/netcoreapp3.0/win-x86/publish
+      archiveFile: $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)\PackageExplorer.$(Build.BuildNumber).zip
+      includeRootFolder: false
+    condition: and(succeeded(), eq(variables['ReleaseChannel'], 'Zip'))
+
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: custom
+      custom: tool
+      arguments: install --tool-path $(System.DefaultWorkingDirectory)\Build SignClient
+    displayName: Install SignTool tool
+    condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['SignClientSecret'], '')), not(eq(variables['SignClientUser'], '')))
+
+  - task: PowerShell@2
+    displayName: Authenticode Sign $(ReleaseChannel) Package artifacts
+    inputs:
+      filePath: Build/Sign-Package.ps1
+    env:
+      SignClientUser: $(SignClientUser)
+      SignClientSecret: $(SignClientSecret)
+      ArtifactDirectory: $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)
+    condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['SignClientSecret'], '')), not(eq(variables['SignClientUser'], '')))
+
+  - task: PowerShell@2
+    displayName: Authenticode Sign $(ReleaseChannel) Zip artifacts
+    inputs:
+      filePath: Build/Sign-Zip.ps1
+    env:
+      SignClientUser: $(SignClientUser)
+      SignClientSecret: $(SignClientSecret)
+      ArtifactDirectory: $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)
+    condition: and(succeeded(), not(eq(variables['build.reason'], 'PullRequest')), not(eq(variables['SignClientSecret'], '')), not(eq(variables['SignClientUser'], '')))
+
+  - task: PublishBuildArtifacts@1
+    displayName: Publish $(ReleaseChannel) Artifact
+    inputs:
+      pathToPublish: $(Build.ArtifactStagingDirectory)\$(ReleaseChannel)
+      artifactType: container
+      artifactName: $(ReleaseChannel)

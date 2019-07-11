@@ -1,39 +1,46 @@
 ﻿using System;
-using System.Runtime.Versioning;
 using System.Windows;
 using System.Windows.Data;
-using NuGetPe;
+using NuGet.Frameworks;
 
 namespace PackageExplorer
 {
     public class TargetFrameworkConverter : IValueConverter
     {
-        public object Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object? Convert(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            FrameworkName framework = (FrameworkName)value;
-            if (framework == null) 
+            var framework = (NuGetFramework)value;
+            if (framework == null)
             {
                 return null;
             }
 
-            return NuGet.VersionUtility.GetShortFrameworkName(framework);
+            return framework.GetShortFolderName();
         }
 
-        public object ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
+        public object? ConvertBack(object value, Type targetType, object parameter, System.Globalization.CultureInfo culture)
         {
-            string stringValue = (string)value;
-            if (String.IsNullOrEmpty(stringValue))
+            var stringValue = (string)value;
+            if (string.IsNullOrEmpty(stringValue))
             {
                 return null;
             }
 
-            FrameworkName framework = NuGet.VersionUtility.ParseFrameworkName(stringValue);
-            if (framework == NuGet.VersionUtility.UnsupportedFrameworkName)
+            try
+            {
+                var framework = NuGetFramework.Parse(stringValue);
+                if (framework.IsUnsupported)
+                {
+                    return DependencyProperty.UnsetValue;
+                }
+
+                return framework;
+            }
+            catch (Exception) // could be an invalid value
             {
                 return DependencyProperty.UnsetValue;
             }
 
-            return framework;
         }
     }
 }

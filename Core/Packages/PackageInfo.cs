@@ -1,56 +1,42 @@
 ﻿using System;
-using System.Data.Services.Common;
+using NuGet.Packaging.Core;
+using NuGet.Versioning;
 
 namespace NuGetPe
 {
-    public interface IPackageInfoType
+    public class PackageInfo
     {
-        bool ShowAll { get; set; }
-    }
-
-    [DataServiceKey("Id", "Version")]
-    [HasStreamAttribute]
-    public class PackageInfo : IPackageInfoType
-    {
-        private string _version;
-        private TemplatebleSemanticVersion _semanticVersion;
-
-        public string Id { get; set; }
-        public string Version
+        public PackageInfo(PackageIdentity identity)
         {
-            get
-            {
-                return _version;
-            }
-            set
-            {
-                _version = value;
-
-                if (String.IsNullOrEmpty(_version))
-                {
-                    _semanticVersion = new TemplatebleSemanticVersion(0, 0, 0, 0);
-                }
-                else
-                {
-                    TemplatebleSemanticVersion.TryParse(_version, out _semanticVersion);
-                }
-            }
+            Identity = identity ?? throw new ArgumentNullException(nameof(identity));
         }
 
-        public string Authors { get; set; }
-        public int VersionDownloadCount { get; set; }
+        public PackageIdentity Identity { get; }
+
+        public string Id => Identity.Id;
+        public NuGetVersion SemanticVersion => Identity.Version;
+        public string Version => SemanticVersion.ToFullString();
+
+        public string? Description { get; set; }
+        public string? Summary { get; set; }
+        public string? Authors { get; set; }
         public int DownloadCount { get; set; }
-        public string PackageHash { get; set; }
-        public Uri DownloadUrl { get; set; }
-        public long PackageSize { get; set; }
-        public bool ShowAll { get; set; }
         public DateTimeOffset? Published { get; set; }
+
+        public string? IconUrl { get; set; }
+        public string? LicenseUrl { get; set; }
+        public string? ProjectUrl { get; set; }
+        public string? Tags { get; set; }
+        public string? ReportAbuseUrl { get; set; }
+
+        public bool IsPrefixReserved { get; set; }
+        public bool IsRemotePackage { get; set; }
 
         public bool IsUnlisted
         {
             get
             {
-                return Published == Constants.Unpublished;
+                return Published == Constants.Unpublished || Published == Constants.V2Unpublished;
             }
         }
 
@@ -58,47 +44,8 @@ namespace NuGetPe
         {
             get
             {
-                return SemanticVersion != null && !String.IsNullOrEmpty(SemanticVersion.SpecialVersion);
+                return SemanticVersion != null && SemanticVersion.IsPrerelease;
             }
-        }
-
-        public int EffectiveDownloadCount
-        {
-            get
-            {
-                return ShowAll ? VersionDownloadCount : DownloadCount;
-            }
-        }
-
-        public bool IsLocalPackage
-        {
-            get
-            {
-                return DownloadUrl.IsFile;
-            }
-        }
-
-        public TemplatebleSemanticVersion SemanticVersion
-        {
-            get
-            {
-                return _semanticVersion;
-            }
-        }
-
-        public DataServicePackage AsDataServicePackage()
-        {
-            return new DataServicePackage
-                   {
-                       Id = Id,
-                       Version = Version,
-                       Authors = Authors,
-                       VersionDownloadCount = VersionDownloadCount,
-                       DownloadCount = DownloadCount,
-                       PackageHash = PackageHash,
-                       Published = Published,
-                       IsPrerelease = IsPrerelease
-                   };
         }
     }
 }

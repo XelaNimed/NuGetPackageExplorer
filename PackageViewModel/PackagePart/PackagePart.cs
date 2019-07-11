@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows.Input;
-using NuGetPe;
+using NuGet.Packaging;
 using NuGetPackageExplorer.Types;
 
 namespace PackageExplorerViewModel
@@ -12,39 +12,32 @@ namespace PackageExplorerViewModel
     [SuppressMessage("Microsoft.Design", "CA1036:OverrideMethodsOnComparableTypes")]
     public abstract class PackagePart : IComparable<PackagePart>, INotifyPropertyChanged, IDisposable
     {
-        private readonly PackageViewModel _viewModel;
         private int _hashCode;
         private bool _isSelected;
-        private string _name;
-        private PackageFolder _parent;
+        private string? _name;
+        private PackageFolder? _parent;
         private string _path;
-        private string _extension;
+        private string? _extension;
 
-        protected PackagePart(string name, PackageFolder parent, PackageViewModel viewModel)
+#pragma warning disable CS8618 // Non-nullable field is uninitialized.
+        protected PackagePart(string name, PackageFolder? parent, PackageViewModel viewModel)
+#pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
             if (name == null)
             {
                 throw new ArgumentNullException("name");
             }
 
-            if (viewModel == null)
-            {
-                throw new ArgumentNullException("viewModel");
-            }
-
-            _viewModel = viewModel;
+            PackageViewModel = viewModel ?? throw new ArgumentNullException("viewModel");
             _parent = parent;
 
             OnNameChange(name);
             RecalculatePath();
         }
 
-        public PackageViewModel PackageViewModel
-        {
-            get { return _viewModel; }
-        }
+        public PackageViewModel PackageViewModel { get; }
 
-        public PackageFolder Parent
+        public PackageFolder? Parent
         {
             get { return _parent; }
             internal set
@@ -59,9 +52,12 @@ namespace PackageExplorerViewModel
 
         public string Name
         {
-            get { return _name; }
+            get { return _name!; }
             set
             {
+                if (value == null)
+                    throw new ArgumentNullException(nameof(value));
+
                 if (_name != value)
                 {
                     OnNameChange(value);
@@ -81,7 +77,7 @@ namespace PackageExplorerViewModel
             Extension = newName == null ? null : System.IO.Path.GetExtension(newName);
         }
 
-        public string Extension
+        public string? Extension
         {
             get { return _extension; }
             set
@@ -155,7 +151,7 @@ namespace PackageExplorerViewModel
                 return 1;
             }
 
-            return String.Compare(Path, other.Path, StringComparison.OrdinalIgnoreCase);
+            return string.Compare(Path, other.Path, StringComparison.OrdinalIgnoreCase);
         }
 
         #endregion
@@ -194,7 +190,7 @@ namespace PackageExplorerViewModel
                         (Parent.ContainsFile(newName) || Parent.ContainsFolder(newName)))
                     {
                         PackageViewModel.UIServices.Show(
-                            String.Format(CultureInfo.CurrentCulture, Resources.RenameCausesNameCollison, newName),
+                            string.Format(CultureInfo.CurrentCulture, Resources.RenameCausesNameCollison, newName),
                             MessageLevel.Error);
                         return;
                     }
@@ -209,9 +205,9 @@ namespace PackageExplorerViewModel
         {
             if (requireConfirmation)
             {
-                bool confirm = PackageViewModel.UIServices.Confirm(
+                var confirm = PackageViewModel.UIServices.Confirm(
                     Resources.ConfirmToDeleteContent_Title,
-                    String.Format(CultureInfo.CurrentCulture, Resources.ConfirmToDeleteContent, Name),
+                    string.Format(CultureInfo.CurrentCulture, Resources.ConfirmToDeleteContent, Name),
                     isWarning: true);
 
                 if (!confirm)
@@ -240,7 +236,7 @@ namespace PackageExplorerViewModel
                 return false;
             }
 
-            for (var cursor = this; cursor != null; cursor = cursor.Parent)
+            for (PackagePart? cursor = this; cursor != null; cursor = cursor.Parent)
             {
                 if (cursor == container)
                 {
@@ -257,17 +253,20 @@ namespace PackageExplorerViewModel
             Justification = "This method is potentially expensive.")]
         public abstract IEnumerable<IPackageFile> GetFiles();
 
+        [SuppressMessage(
+            "Microsoft.Design",
+            "CA1024:UsePropertiesWhereAppropriate",
+            Justification = "This method is potentially expensive.")]
+        public abstract IEnumerable<PackagePart> GetPackageParts();
+
         protected void OnPropertyChanged(string propertyName)
         {
-            if (PropertyChanged != null)
-            {
-                PropertyChanged(this, new PropertyChangedEventArgs(propertyName));
-            }
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
         protected void RecalculatePath()
         {
-            Path = (Parent == null || String.IsNullOrEmpty(Parent.Path)) ? Name : (Parent.Path + "\\" + Name);
+            Path = (Parent == null || string.IsNullOrEmpty(Parent.Path)) ? Name : (Parent.Path + "\\" + Name);
         }
 
         internal virtual void UpdatePath()
@@ -275,10 +274,9 @@ namespace PackageExplorerViewModel
             RecalculatePath();
         }
 
-        public override bool Equals(object obj)
+        public override bool Equals(object? obj)
         {
-            var other = obj as PackagePart;
-            if (other == null)
+            if (!(obj is PackagePart other))
             {
                 return false;
             }

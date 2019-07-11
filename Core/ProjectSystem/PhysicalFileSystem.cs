@@ -7,23 +7,18 @@ namespace NuGetPe
 {
     public class PhysicalFileSystem : IFileSystem
     {
-        private readonly string _root;
-
         public PhysicalFileSystem(string root)
         {
-            if (String.IsNullOrEmpty(root))
+            if (string.IsNullOrEmpty(root))
             {
                 throw new ArgumentException("Argument cannot be null or empty.", "root");
             }
-            _root = root;
+            Root = root;
         }
 
         #region IFileSystem Members
 
-        public string Root
-        {
-            get { return _root; }
-        }
+        public string Root { get; }
 
         public virtual string GetFullPath(string path)
         {
@@ -32,12 +27,14 @@ namespace NuGetPe
 
         public virtual void AddFile(string path, Stream stream)
         {
-            EnsureDirectory(Path.GetDirectoryName(path));
-
-            using (Stream outputStream = File.Create(GetFullPath(path)))
+            var d = Path.GetDirectoryName(path);
+            if (d != null)
             {
-                stream.CopyTo(outputStream);
+                EnsureDirectory(d);
             }
+
+            using Stream outputStream = File.Create(GetFullPath(path));
+            stream.CopyTo(outputStream);
         }
 
         public virtual void DeleteFile(string path)

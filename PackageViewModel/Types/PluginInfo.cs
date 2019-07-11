@@ -1,27 +1,23 @@
 ﻿using System;
-using NuGetPe;
+using NuGet.Versioning;
 
 namespace NuGetPackageExplorer.Types
 {
     public class PluginInfo : IEquatable<PluginInfo>
     {
-        public PluginInfo(string id, TemplatebleSemanticVersion version)
+        public PluginInfo(string id, NuGetVersion version)
         {
-            if (String.IsNullOrEmpty(id))
+            if (string.IsNullOrEmpty(id))
             {
                 throw new ArgumentException("Id cannot be null or empty.", "id");
             }
-            if (version == null)
-            {
-                throw new ArgumentNullException("version");
-            }
 
             Id = id;
-            Version = version;
+            Version = version ?? throw new ArgumentNullException("version");
         }
 
         public string Id { get; private set; }
-        public TemplatebleSemanticVersion Version { get; private set; }
+        public NuGetVersion Version { get; private set; }
 
         #region IEquatable<PluginInfo> Members
 
@@ -39,7 +35,7 @@ namespace NuGetPackageExplorer.Types
 
         public override int GetHashCode()
         {
-            return Id.GetHashCode()*3137 + Version.GetHashCode();
+            return Id.GetHashCode() * 3137 + Version.GetHashCode();
         }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NuGetPe;
+using NuGet.Packaging;
 
 namespace PackageExplorerViewModel
 {
@@ -14,11 +14,11 @@ namespace PackageExplorerViewModel
                 throw new ArgumentNullException("paths");
             }
 
-            paths.Sort((p1, p2) => String.Compare(p1.Path, p2.Path, StringComparison.OrdinalIgnoreCase));
+            paths.Sort((p1, p2) => string.Compare(p1.Path, p2.Path, StringComparison.OrdinalIgnoreCase));
 
             var root = new PackageFolder("", viewModel);
 
-            List<Tuple<IPackageFile, string[]>> parsedPaths =
+            var parsedPaths =
                 paths.Select(p => Tuple.Create(p, p.Path.Split('\\'))).ToList();
             Parse(root, parsedPaths, 0, 0, parsedPaths.Count);
 
@@ -28,10 +28,10 @@ namespace PackageExplorerViewModel
         private static void Parse(PackageFolder root, List<Tuple<IPackageFile, string[]>> parsedPaths, int level,
                                   int start, int end)
         {
-            int i = start;
+            var i = start;
             while (i < end)
             {
-                string s = parsedPaths[i].Item2[level];
+                var s = parsedPaths[i].Item2[level];
 
                 if (parsedPaths[i].Item2.Length == level + 1)
                 {
@@ -47,7 +47,7 @@ namespace PackageExplorerViewModel
                 else
                 {
                     // it's a folder
-                    int j = i;
+                    var j = i;
                     while (
                         j < end &&
                         level < parsedPaths[j].Item2.Length &&

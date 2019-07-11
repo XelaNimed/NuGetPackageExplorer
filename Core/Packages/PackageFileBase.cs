@@ -1,21 +1,29 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Versioning;
-using NuGet;
+using NuGet.Frameworks;
+using NuGet.Packaging;
 
 namespace NuGetPe
 {
     public abstract class PackageFileBase : IPackageFile
     {
-        private readonly FrameworkName _targetFramework;
-
         protected PackageFileBase(string path)
         {
             Path = path;
 
-            string effectivePath;
-            _targetFramework = VersionUtility.ParseFrameworkNameFromFilePath(path, out effectivePath);
+            FrameworkNameUtility.ParseFrameworkNameFromFilePath(path, out var effectivePath);
             EffectivePath = effectivePath;
+
+            try
+            {
+                TargetFramework = new FrameworkName(NuGetFramework.Parse(effectivePath).DotNetFrameworkName);
+            }
+            catch (ArgumentException) // could be an invalid framework/version
+            {
+
+            }
         }
 
         public string Path
@@ -24,7 +32,7 @@ namespace NuGetPe
             private set;
         }
 
-        public virtual string OriginalPath
+        public virtual string? OriginalPath
         {
             get
             {
@@ -40,13 +48,7 @@ namespace NuGetPe
             private set;
         }
 
-        public FrameworkName TargetFramework
-        {
-            get
-            {
-                return _targetFramework;
-            }
-        }
+        public FrameworkName? TargetFramework { get; }
 
         public IEnumerable<FrameworkName> SupportedFrameworks
         {
@@ -59,5 +61,7 @@ namespace NuGetPe
                 yield break;
             }
         }
+
+        public virtual DateTimeOffset LastWriteTime { get; } = DateTimeOffset.MinValue;
     }
 }
