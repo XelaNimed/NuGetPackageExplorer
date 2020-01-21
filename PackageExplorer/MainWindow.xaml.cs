@@ -39,6 +39,9 @@ namespace PackageExplorer
         public MainWindow(IMruManager mruManager)
 #pragma warning restore CS8618 // Non-nullable field is uninitialized.
         {
+            if (mruManager is null)
+                throw new ArgumentNullException(nameof(mruManager));
+
             InitializeComponent();
 
             RecentFilesMenuItem.DataContext = _mruManager = mruManager;
@@ -73,7 +76,9 @@ namespace PackageExplorer
         public IPackageViewModelFactory PackageViewModelFactory { get; set; }
 
         [ImportMany(AllowRecomposition = true)]
+#pragma warning disable CA2227 // Collection properties should be read only
         public ObservableCollection<LazyPackageCommand> PackageCommands
+#pragma warning restore CA2227 // Collection properties should be read only
         {
             get
             {
@@ -165,7 +170,9 @@ namespace PackageExplorer
                     Constants.SymbolPackageExtension.Equals(extension, StringComparison.OrdinalIgnoreCase))
                 {
                     DiagnosticsClient.TrackPageView("View Existing Package");
+#pragma warning disable CA2000 // Dispose objects before losing scope
                     package = new ZipPackage(tempFile);
+#pragma warning restore CA2000 // Dispose objects before losing scope
                 }
                 else if (Constants.ManifestExtension.Equals(extension, StringComparison.OrdinalIgnoreCase))
                 {
@@ -184,6 +191,7 @@ namespace PackageExplorer
             }
             catch (Exception ex)
             {
+                package?.Dispose();
                 package = null;
                 UIServices.Show(ex.Message, MessageLevel.Error);
                 return false;
@@ -289,6 +297,7 @@ namespace PackageExplorer
             }
         }
 
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA2000:Dispose objects before losing scope", Justification = "<Pending>")]
         private void NewMenuItem_Click(object sender, ExecutedRoutedEventArgs e)
         {
             DiagnosticsClient.TrackEvent("MainWindow_NewMenuItemClick");
@@ -369,7 +378,7 @@ namespace PackageExplorer
             {
                 LoadPackage(package,
                             package.Source,
-                            repository.PackageSource.Source,
+                            repository!.PackageSource.Source,
                             PackageType.RemotePackage);
 
                 // adding package to the cache, but with low priority

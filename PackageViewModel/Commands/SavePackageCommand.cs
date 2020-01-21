@@ -46,7 +46,7 @@ namespace PackageExplorerViewModel
             return !isSigned && !hasTokens && !ViewModel.IsInEditFileMode;
         }
 
-        public event EventHandler CanExecuteChanged;
+        public event EventHandler? CanExecuteChanged;
 
         public void Execute(object parameter)
         {
@@ -224,7 +224,7 @@ namespace PackageExplorerViewModel
 
         private async void SignAndSaveAs()
         {
-            var signViewModel = new SignPackageViewModel(ViewModel, ViewModel.UIServices, ViewModel.SettingsManager);
+            using var signViewModel = new SignPackageViewModel(ViewModel, ViewModel.UIServices, ViewModel.SettingsManager);
 
             if (ViewModel.UIServices.OpenSignPackageDialog(signViewModel, out var signedPackagePath))
             {

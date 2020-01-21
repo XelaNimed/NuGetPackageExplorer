@@ -107,7 +107,7 @@ namespace PackageExplorer
             }
             else
             {
-                selectedFileNames = new string[0];
+                selectedFileNames = Array.Empty<string>();
                 return false;
             }
         }
@@ -142,7 +142,7 @@ namespace PackageExplorer
 
                 MessageLevel.Warning => MessageBoxImage.Warning,
 
-                _ => throw new ArgumentOutOfRangeException("messageLevel"),
+                _ => throw new ArgumentOutOfRangeException(nameof(messageLevel)),
             };
             void ShowDialog()
             {
@@ -247,7 +247,7 @@ namespace PackageExplorer
 
         public bool OpenFolderDialog(string title, string initialPath, out string selectedPath)
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog()
+            using var dialog = new System.Windows.Forms.FolderBrowserDialog()
             {
                 SelectedPath = initialPath,
                 Description = title,
@@ -286,7 +286,7 @@ namespace PackageExplorer
         {
             if (numberOfItemsLeft < 0)
             {
-                throw new ArgumentOutOfRangeException("numberOfItemsLeft");
+                throw new ArgumentOutOfRangeException(nameof(numberOfItemsLeft));
             }
 
             var mainInstruction = string.Format(
@@ -366,7 +366,7 @@ namespace PackageExplorer
                 Resources.MoveContentFileToFolderExplanation,
                 targetFolder);
 
-            var dialog = new TaskDialog
+            using var dialog = new TaskDialog
             {
                 MainInstruction = mainInstruction,
                 Content = content,
@@ -478,13 +478,22 @@ namespace PackageExplorer
                 WindowTitle = Resources.Dialog_Title,
                 MainInstruction = "Credentials for " + target,
                 Content = "Enter Personal Access Tokens in the username field.",
-                Target = target
+                Target = target,
+                ShowSaveCheckBox = true, // Allow user to save the credentials to operating system's credential manager
+                ShowUIForSavedCredentials = false // Do not show dialog when credentials can be grabbed from OS credential manager
             };
 
             try
             {
+                // Show dialog or query credential manager
                 if (dialog.ShowDialog())
                 {
+                    // When dialog was shown
+                    if (!dialog.IsStoredCredential)
+                    {
+                        // Save the credentials when save checkbox was checked
+                        dialog.ConfirmCredentials(true);
+                    }
                     networkCredential = dialog.Credentials;
                     return true;
                 }

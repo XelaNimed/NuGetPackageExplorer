@@ -3,11 +3,11 @@
   <Identity Name="50582LuanNguyen.NuGetPackageExplorer.Local" Publisher="CN=oren" Version="3.25.0.0" />
   <Properties>
     <DisplayName>NuGet Package Explorer (Local)</DisplayName>
-    <PublisherDisplayName>Oren Novotny, LLC</PublisherDisplayName>
+    <PublisherDisplayName>NuGet Package Explorer (Local)</PublisherDisplayName>
     <Logo>NightlyAssets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
-    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.15063.0" MaxVersionTested="10.0.18362.0" />
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.17134.0" MaxVersionTested="10.0.18362.0" />
   </Dependencies>
   <Resources>
     <Resource Language="EN-US" />
